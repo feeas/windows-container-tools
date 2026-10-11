@@ -192,8 +192,7 @@ EventMonitor::StartEventMonitor()
 logWriter.TraceError(  
     Utility::FormatString(L"DEBUG: hSubscription = %p, GetLastError = %lu",  
         hSubscription, GetLastError()).c_str()  
-);  
-
+);
     if (NULL == hSubscription)
     {
         status = GetLastError();
