@@ -188,6 +188,11 @@ EventMonitor::StartEventMonitor()
         NULL,
         evtSubscribeFlags
     );
+    // ★ 临时调试:打印真实句柄值  
+logWriter.TraceError(  
+    Utility::FormatString(L"DEBUG: hSubscription = %p, GetLastError = %lu",  
+        hSubscription, GetLastError()).c_str()  
+);  
 
     if (NULL == hSubscription)
     {
