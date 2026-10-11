@@ -52,7 +52,7 @@ jobs:
         uses: microsoft/setup-msbuild@v2  
         with:  
           msbuild-architecture: ${{ matrix.build-platform }} # Default is x86. Options are x86, x64, and arm64  
-        
+  
       - name: Check solution path  
         run: |  
           if (-not (Test-Path -Path "${{ env.SolutionPath }}" -ErrorAction Continue)) {  
@@ -61,6 +61,20 @@ jobs:
           Write-Host "Current dir: $PWD"  
           Write-Host "Solution path: ${{ env.SolutionPath }}"  
           Get-ChildItem "${{ env.SolutionPath }}" -ErrorAction Continue  
+  
+      # 安装 vcpkg 并启用 manifest 模式所需的环境变量  
+      # 必须写入 $GITHUB_ENV，否则 VCPKG_ROOT 不会传递到后续的 "Build LogMonitor" 步骤  
+      - name: Install and bootstrap vcpkg  
+        run: |  
+          git clone https://github.com/microsoft/vcpkg.git vcpkg  
+          .\vcpkg\bootstrap-vcpkg.bat  
+          .\vcpkg\vcpkg.exe integrate install  
+          echo "VCPKG_ROOT=$PWD\vcpkg" >> $env:GITHUB_ENV  
+  
+      - name: Verify vcpkg.json manifest is discoverable  
+        run: |  
+          Write-Host "VCPKG_ROOT=$env:VCPKG_ROOT"  
+          Get-ChildItem -Recurse -Filter vcpkg.json -ErrorAction Continue  
   
       # https://github.blog/changelog/2024-01-12-code-scanning-deprecation-of-codeql-action-v2/  
       # https://docs.github.com/en/code-security/code-scanning/creating-an-advanced-setup-for-code-scanning/customizing-your-advanced-setup-for-code-scanning  
@@ -73,10 +87,11 @@ jobs:
           build-mode: ${{ matrix.build-mode }}  
   
       # https://learn.microsoft.com/en-us/visualstudio/msbuild/msbuild-command-line-reference?view=vs-2022#arguments  
+      # /p:VcpkgEnableManifest=true 和 /p:VcpkgRoot 显式指定，避免依赖隐式检测  
       - name: Build LogMonitor  
         run:  |  
           msbuild.exe "${{ env.SolutionPath }}" /t:clean  
-          msbuild.exe "${{ env.SolutionPath }}" /p:platform="${{ matrix.build-platform }}" /p:configuration="${{ env.BuildConfiguration }}"  
+          msbuild.exe "${{ env.SolutionPath }}" /p:platform="${{ matrix.build-platform }}" /p:configuration="${{ env.BuildConfiguration }}" /p:VcpkgEnableManifest=true /p:VcpkgRoot="$env:VCPKG_ROOT"  
   
       - name: Verify build output  
         run: |  
